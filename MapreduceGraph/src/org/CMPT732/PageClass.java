@@ -12,8 +12,8 @@ import org.apache.hadoop.io.Writable;
 public class PageClass implements Writable{
 	 
 	    private int distance;
-	    private String path_str = null;
-	    private String neighbors_str = null;
+	    //private String path_str = null;
+	   // private String neighbors_str = null;
 	    private ArrayList<Integer> path = new ArrayList<Integer>();
 	    private ArrayList<Integer> neighbors = new ArrayList<Integer>();
 	 
@@ -35,7 +35,7 @@ public class PageClass implements Writable{
 
 	        if (input[1] != null && !input[1].equals("null") && !input[1].equals("")){
 	        	String[] pathstring = input[1].trim().split(" ");
-	        	System.out.println(input[1]);
+	        	//System.out.println(input[1]);
 		        for(int n = 0; n < pathstring.length; n++) {
 		           path.add(Integer.parseInt(pathstring[n]));
 		         }
@@ -54,8 +54,14 @@ public class PageClass implements Writable{
 		        neighbors=null;
 		        }
 	    	set(Integer.parseInt(input[0]), path,neighbors);
-	    	this.path_str = input[1];
-	    	this.neighbors_str = input[2];
+	    	//this.path_str = input[1];
+	    	//this.neighbors_str = input[2];
+	    }
+	    
+	    
+	    public PageClass get(){
+	    	
+	    	return this; 
 	    }
 	 
 	    public ArrayList<Integer> getPath() {
@@ -73,6 +79,11 @@ public class PageClass implements Writable{
 	    public void set(int distance, ArrayList<Integer> path, ArrayList<Integer> neighbors) {
 	        this.path = path;
 	        this.neighbors = neighbors;
+	        this.distance = distance;
+	    }
+	    public void set(int distance, ArrayList<Integer> path) {
+	        this.path = path;
+	        //this.neighbors = neighbors;
 	        this.distance = distance;
 	    }
 	 
@@ -119,6 +130,16 @@ public class PageClass implements Writable{
 	 
 	    @Override
 	    public String toString() {
+	    	String path_str =null;
+	    	String neighbors_str = null; 
+	    	
+	    	
+	    	if (this.path!= null && this.path.size() !=0){
+	    	path_str = this.path.toString().replaceAll("[^0-9]", " ");
+	    	}
+	    	if(this.neighbors!=null && this.neighbors.size()!=0){
+	    	neighbors_str = this.neighbors.toString().replaceAll("[^0-9]", " ");
+	    	}
 	        return Integer.toString(distance) + "," + path_str +"," + neighbors_str;
 	    }
 /*	 

@@ -37,11 +37,74 @@ public class GraphMain {
             String[] inArray = in.split("\t");
             int p = Integer.parseInt(inArray[0]);
             //String page = inArray[1]+ inArray[2]+inArray[3];
-            context.write(new IntWritable(p) , new PageClass(inArray[1]));
+            PageClass page = new PageClass(inArray[1]);
+            
+            context.write(new IntWritable(p) , page);
+            
+            if(page.getdistance()!= Integer.MAX_VALUE){
+            	ArrayList<Integer> neighbors = page.getneighbors();
+            	for(int i=0;i<neighbors.size();i++){
+            		int neighbour_id = neighbors.get(i);
+            		int neighbour_distance = page.getdistance() +1;
+            		ArrayList<Integer> neighbour_path = new ArrayList<Integer>();
+            		if(page.getPath() != null && !page.getPath().equals("null") && !page.getPath().equals("")){
+            			neighbour_path = page.getPath();
+            			neighbour_path.add(p);
+            			 
+            			
+            		}
+            		else{
+            			neighbour_path.add(p);
+            		}
+            		
+            		ArrayList<Integer> neighbour_neighbour = new ArrayList<Integer>();
+            		PageClass new_page = new PageClass(neighbour_distance, neighbour_path, neighbour_neighbour);
+            		context.write(new IntWritable(neighbour_id) , new_page);
+       
+            		
+            		
+            	}
+            }
+            
             	
             	
             
             //context.write(new Text(in), one);
+        }
+    }
+	
+	public static class Reduce extends Reducer<IntWritable, PageClass, IntWritable, PageClass> {
+        public void reduce(IntWritable key, Iterable<PageClass> values, Context context)
+          throws IOException, InterruptedException {
+            // Write me
+        	
+        	int count=0;
+        	int distance = Integer.MAX_VALUE;
+        	ArrayList<Integer> path = new ArrayList<Integer>();
+        	PageClass page = new PageClass();
+        	while (values.iterator().hasNext())
+        	{
+        		
+        		PageClass neighbors = values.iterator().next().get();
+        		count++;
+        		//System.out.println(Integer.toString(count));
+        		//System.out.println("testoutput "+neighbors.toString());
+        			//System.out.println(neighbors.toString());
+        			
+        		if(neighbors.getneighbors()!=null && neighbors.getneighbors().size()!=0){
+        			page = neighbors; //
+        		}
+        		else if(neighbors.getdistance() < distance){
+        			distance = neighbors.getdistance();
+        			path = neighbors.getPath();
+        		}
+        	}
+        	if(count!=1){
+        	System.out.println(Integer.toString(count));
+        	}
+        	page.set(distance, path);
+        	context.write(key, page);
+        	
         }
     }
 	
@@ -56,7 +119,7 @@ public class GraphMain {
 		
 		final Path inDir = new Path(TMP_DIR, "in");
         final Path outDir = new Path(TMP_DIR, "out");
-      //mapreduc
+      //mapreduce
 		long starttime = System.currentTimeMillis();
 		  Job job = Job.getInstance(new Configuration());
 		  job.setJarByClass(GraphMain.class);
@@ -66,9 +129,9 @@ public class GraphMain {
 		  job.setOutputValueClass(PageClass.class);
 		
 		  job.setMapperClass(Map.class);
-		  //job.setReducerClass(Reduce.class);
-		  job.setNumReduceTasks(0);
-		  job.getConfiguration().set("mapreduce.textoutputformat.separator", ":");
+		  job.setReducerClass(Reduce.class);
+		  //job.setNumReduceTasks(0);
+		  //job.getConfiguration().set("mapreduce.textoutputformat.separator", ":");
 		  job.setInputFormatClass(TextInputFormat.class);
 		  job.setOutputFormatClass(TextOutputFormat.class);
 		  
@@ -113,8 +176,16 @@ public class GraphMain {
 				//Process each line and add output to Dest.txt fileha
 				String[] alines = aLine.split(":");
 				//alines[1].split[" "];
+				if(alines[0].equals("2")){    //set the distance of the source node to 0; 
+					
+				out.write(alines[0]+"\t"+ 0 +",null,"+alines[1]);
+				out.newLine();	
+					
+				}
+				else{
 				out.write(alines[0]+"\t"+ MAX +",null,"+alines[1]);
 				out.newLine();
+				}
 			}
 			
 			// do not forget to close the buffer reader
