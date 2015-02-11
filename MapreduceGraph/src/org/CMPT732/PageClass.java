@@ -1,7 +1,6 @@
 package org.CMPT732;
 
 import java.util.*;
-import java.util.ArrayList;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -13,13 +12,15 @@ import org.apache.hadoop.io.Writable;
 public class PageClass implements Writable{
 	 
 	    private int distance;
+	    private String path_str = null;
+	    private String neighbors_str = null;
 	    private ArrayList<Integer> path = new ArrayList<Integer>();
 	    private ArrayList<Integer> neighbors = new ArrayList<Integer>();
 	 
-	   /* public PageClass(Text first, Text second) {
-	        set(first, second);
+	    public PageClass() {
+	        set(Integer.MAX_VALUE,  new ArrayList<Integer>(),  new ArrayList<Integer>());
 	    }
-	 */
+	 
 	    public PageClass(int distance, ArrayList<Integer> path, ArrayList<Integer> neighbors) {
 	        set(distance, path, neighbors);
 	    }
@@ -29,26 +30,32 @@ public class PageClass implements Writable{
 	        ArrayList<Integer> path = new ArrayList<Integer>();
 	        ArrayList<Integer> neighbors = new ArrayList<Integer>();
 	        
-	        String[] pathstring = input[1].split(" ");
-	        String[] neighborstring = input[2].split(" ");
+	        
+	        
 
-	        if (pathstring != null){
+	        if (input[1] != null && !input[1].equals("null") && !input[1].equals("")){
+	        	String[] pathstring = input[1].trim().split(" ");
+	        	System.out.println(input[1]);
 		        for(int n = 0; n < pathstring.length; n++) {
 		           path.add(Integer.parseInt(pathstring[n]));
 		         }
 	        }
 	        else{
-	        	path.add(null);
+	        	path=null;
 	        }
-	        if (neighborstring != null){
+	        
+	        if (input[2] != null && !input[2].equals("null") && !input[2].equals("")){
+	        	String[] neighborstring = input[2].trim().split(" ");
 		        for(int n = 0; n < neighborstring.length; n++) {
 		           neighbors.add(Integer.parseInt(neighborstring[n]));
 			         }
 		        }
 		    else{
-		        neighbors.add(null);
+		        neighbors=null;
 		        }
 	    	set(Integer.parseInt(input[0]), path,neighbors);
+	    	this.path_str = input[1];
+	    	this.neighbors_str = input[2];
 	    }
 	 
 	    public ArrayList<Integer> getPath() {
@@ -71,29 +78,50 @@ public class PageClass implements Writable{
 	 
 	    @Override
 	    public void readFields(DataInput in) throws IOException {
+	        //PageClass p = new PageClass();
+	        distance = in.readInt();
+	        int path_size = in.readInt();
+	        
+	        for(int i=0; i<path_size;i++){
+	        	path.add(in.readInt());
+	        	
+	        }
+	        int neighbors_size = in.readInt();
+	        for(int i=0; i<neighbors_size;i++){
+	        	neighbors.add(in.readInt());
+	        	
+	        }
 	        
 	    }
 	 
 	    @Override
 	    public void write(DataOutput out) throws IOException {
 	        out.writeInt(distance);
-	        
-	        out.writeInt(path.size());
-	        for(int i=0;i<path.size();i++){
-	        	out.writeInt(path.get(i));
+	        if(path != null){
+		        out.writeInt(path.size());
+		        for(int i=0;i<path.size();i++){
+		        	out.writeInt(path.get(i));
+		        }
 	        }
-	        
-	        out.writeInt(neighbors.size());
-	        for(int i=0;i<neighbors.size();i++){
-	        	out.writeInt(neighbors.get(i));
+	        else{
+	        	out.writeInt(-1);
+	        	}
+	        if(neighbors != null){
+		        out.writeInt(neighbors.size());
+		        for(int i=0;i<neighbors.size();i++){
+		        	out.writeInt(neighbors.get(i));
+		        }
 	        }
-	    }
-/*	 
-	    @Override
-	    public String toString() {
-	        return first + " " + second;
+	        else{
+	        	out.writeInt(-1);
+	        }
 	    }
 	 
+	    @Override
+	    public String toString() {
+	        return Integer.toString(distance) + "," + path_str +"," + neighbors_str;
+	    }
+/*	 
 	  	@Override
 	  public int compareTo( Object o) {
 	    	PageClass tp = (PageClass) o;
