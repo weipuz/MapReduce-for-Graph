@@ -9,8 +9,9 @@ public class testArraylist {
 		 ArrayList<Integer> path = new ArrayList<Integer>();
 		 path.add(2);
 		 path.add(3);
-		 String newin = path.toString().replaceAll("[^0-9]", " ");
-		 System.out.println(newin);
+		 String newin = "2  3";
+		 String[] a = newin.split("\\s+");
+		 System.out.println(a[0]+a[1]);
 
 	}
 

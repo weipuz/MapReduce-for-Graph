@@ -24,23 +24,19 @@ public class GraphMain {
 
 	static private final Path TMP_DIR = new Path(GraphMain.class.getSimpleName() + "_TMP_");
 	
-	public static class Map extends Mapper<LongWritable, Text, IntWritable, PageClass> {
-    	private int tmax_tmp;
+	public static class Map extends Mapper<LongWritable, Text, IntWritable, Text> {
     	
-    	private Text word = new Text();
     	private final static IntWritable one = new IntWritable(1);
         public void map(LongWritable key, Text value, Context context)
            throws IOException, InterruptedException {
             String in = value.toString();
-            //String newin = in.replaceAll("[^a-zA-Z ]", "");
-            //StringTokenizer tokenizer = new StringTokenizer(in);
             String[] inArray = in.split("\t");
             int p = Integer.parseInt(inArray[0]);
             //String page = inArray[1]+ inArray[2]+inArray[3];
             PageClass page = new PageClass(inArray[1]);
             
-            context.write(new IntWritable(p) , page);
-            
+            context.write(new IntWritable(p) , new Text(page.toString()));
+            System.out.println("mapper output:  "+ Integer.toString(p) + page.toString());
             if(page.getdistance()!= Integer.MAX_VALUE){
             	ArrayList<Integer> neighbors = page.getneighbors();
             	for(int i=0;i<neighbors.size();i++){
@@ -57,9 +53,10 @@ public class GraphMain {
             			neighbour_path.add(p);
             		}
             		
-            		ArrayList<Integer> neighbour_neighbour = new ArrayList<Integer>();
-            		PageClass new_page = new PageClass(neighbour_distance, neighbour_path, neighbour_neighbour);
-            		context.write(new IntWritable(neighbour_id) , new_page);
+            		//ArrayList<Integer> neighbour_neighbour = new ArrayList<Integer>();
+            		PageClass new_page = new PageClass(neighbour_distance, neighbour_path, null);
+            		context.write(new IntWritable(neighbour_id) , new Text(new_page.toString()));
+            		System.out.println("mapper output:  "+ Integer.toString(neighbour_id) + new_page.toString());
        
             		
             		
@@ -69,28 +66,28 @@ public class GraphMain {
             	
             	
             
-            //context.write(new Text(in), one);
+            
         }
     }
 	
-	public static class Reduce extends Reducer<IntWritable, PageClass, IntWritable, PageClass> {
-        public void reduce(IntWritable key, Iterable<PageClass> values, Context context)
+	public static class Reduce extends Reducer<IntWritable, Text, IntWritable, PageClass> {
+        public void reduce(IntWritable key, Iterable<Text> values, Context context)
           throws IOException, InterruptedException {
             // Write me
         	
         	int count=0;
         	int distance = Integer.MAX_VALUE;
         	ArrayList<Integer> path = new ArrayList<Integer>();
+        	//ArrayList<Integer> neighbor = new ArrayList<Integer>();
         	PageClass page = new PageClass();
-        	while (values.iterator().hasNext())
+        	Iterator<Text> iter = values.iterator();
+        	while (iter.hasNext())
         	{
         		
-        		PageClass neighbors = values.iterator().next().get();
-        		count++;
-        		//System.out.println(Integer.toString(count));
-        		//System.out.println("testoutput "+neighbors.toString());
+        		PageClass neighbors = new PageClass(iter.next().toString());
+        		System.out.println("reducer input:  "+ key.toString() + neighbors.toString());
         			//System.out.println(neighbors.toString());
-        			
+        		count++;	
         		if(neighbors.getneighbors()!=null && neighbors.getneighbors().size()!=0){
         			page = neighbors; //
         		}
@@ -99,9 +96,9 @@ public class GraphMain {
         			path = neighbors.getPath();
         		}
         	}
-        	if(count!=1){
-        	System.out.println(Integer.toString(count));
-        	}
+        	//if(count!=1){
+        	//System.out.println(Integer.toString(count));
+        	//}
         	page.set(distance, path);
         	context.write(key, page);
         	
@@ -124,7 +121,7 @@ public class GraphMain {
 		  Job job = Job.getInstance(new Configuration());
 		  job.setJarByClass(GraphMain.class);
 		  job.setMapOutputKeyClass(IntWritable.class);
-		  job.setMapOutputValueClass(PageClass.class);
+		  job.setMapOutputValueClass(Text.class);
 		  job.setOutputKeyClass(IntWritable.class);
 		  job.setOutputValueClass(PageClass.class);
 		

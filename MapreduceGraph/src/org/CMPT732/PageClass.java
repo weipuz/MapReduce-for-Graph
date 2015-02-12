@@ -13,7 +13,7 @@ public class PageClass implements Writable{
 	 
 	    private int distance;
 	    //private String path_str = null;
-	   // private String neighbors_str = null;
+	    //private String neighbors_str = null;
 	    private ArrayList<Integer> path = new ArrayList<Integer>();
 	    private ArrayList<Integer> neighbors = new ArrayList<Integer>();
 	 
@@ -34,7 +34,7 @@ public class PageClass implements Writable{
 	        
 
 	        if (input[1] != null && !input[1].equals("null") && !input[1].equals("")){
-	        	String[] pathstring = input[1].trim().split(" ");
+	        	String[] pathstring = input[1].trim().split("\\s+");
 	        	//System.out.println(input[1]);
 		        for(int n = 0; n < pathstring.length; n++) {
 		           path.add(Integer.parseInt(pathstring[n]));
@@ -45,8 +45,10 @@ public class PageClass implements Writable{
 	        }
 	        
 	        if (input[2] != null && !input[2].equals("null") && !input[2].equals("")){
-	        	String[] neighborstring = input[2].trim().split(" ");
+	        	String[] neighborstring = input[2].trim().split("\\s+");
+	        	//System.out.println(input[2].trim() + neighborstring.length);
 		        for(int n = 0; n < neighborstring.length; n++) {
+		        	//System.out.println(n);
 		           neighbors.add(Integer.parseInt(neighborstring[n]));
 			         }
 		        }
@@ -80,10 +82,14 @@ public class PageClass implements Writable{
 	        this.path = path;
 	        this.neighbors = neighbors;
 	        this.distance = distance;
+	      /*  if(neighbors!=null && neighbors.size()!=0){
+		    	neighbors_str = neighbors.toString().replaceAll("[^0-9]", " ");
+		    	}
+	        else{neighbors_str="null";}*/
 	    }
 	    public void set(int distance, ArrayList<Integer> path) {
 	        this.path = path;
-	        //this.neighbors = neighbors;
+	        //this.neighbors = null;
 	        this.distance = distance;
 	    }
 	 
@@ -108,23 +114,23 @@ public class PageClass implements Writable{
 	    @Override
 	    public void write(DataOutput out) throws IOException {
 	        out.writeInt(distance);
-	        if(path != null){
+	        if(path != null && path.size() !=0){
 		        out.writeInt(path.size());
 		        for(int i=0;i<path.size();i++){
 		        	out.writeInt(path.get(i));
 		        }
 	        }
 	        else{
-	        	out.writeInt(-1);
+	        	out.writeInt(0);
 	        	}
-	        if(neighbors != null){
+	        if(neighbors != null && neighbors.size()!=0){
 		        out.writeInt(neighbors.size());
 		        for(int i=0;i<neighbors.size();i++){
 		        	out.writeInt(neighbors.get(i));
 		        }
 	        }
 	        else{
-	        	out.writeInt(-1);
+	        	out.writeInt(0);
 	        }
 	    }
 	 
@@ -134,12 +140,14 @@ public class PageClass implements Writable{
 	    	String neighbors_str = null; 
 	    	
 	    	
-	    	if (this.path!= null && this.path.size() !=0){
-	    	path_str = this.path.toString().replaceAll("[^0-9]", " ");
+	    	if (path!= null && path.size() !=0){
+	    	path_str = path.toString().replaceAll("[^0-9]", " ");
 	    	}
-	    	if(this.neighbors!=null && this.neighbors.size()!=0){
-	    	neighbors_str = this.neighbors.toString().replaceAll("[^0-9]", " ");
+	    	else{path_str = "null";}
+	    	if(neighbors!=null && neighbors.size()!=0){
+	    	neighbors_str = neighbors.toString().replaceAll("[^0-9]", " ");
 	    	}
+	    	else{neighbors_str = "null";}
 	        return Integer.toString(distance) + "," + path_str +"," + neighbors_str;
 	    }
 /*	 
