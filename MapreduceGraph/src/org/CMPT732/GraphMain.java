@@ -56,7 +56,7 @@ public class GraphMain {
             		//ArrayList<Integer> neighbour_neighbour = new ArrayList<Integer>();
             		PageClass new_page = new PageClass(neighbour_distance, neighbour_path, null);
             		context.write(new IntWritable(neighbour_id) , new Text(new_page.toString()));
-            		System.out.println("mapper output:  "+ Integer.toString(neighbour_id) + new_page.toString());
+            		System.out.println("mapper output:  key: "+ Integer.toString(neighbour_id) + " value: " + new_page.toString());
        
             		
             		
@@ -71,9 +71,21 @@ public class GraphMain {
     }
 	
 	public static class Reduce extends Reducer<IntWritable, Text, IntWritable, PageClass> {
+		
+		private int endpage;
+		private boolean found; 
+		
+		public void setup(Context context) throws IOException,
+		InterruptedException {
+			Configuration conf = context.getConfiguration();
+			endpage = conf.getInt("endpage",1);
+			System.out.println("endpage in reducer is :"+ endpage);
+			
+		}
         public void reduce(IntWritable key, Iterable<Text> values, Context context)
           throws IOException, InterruptedException {
             // Write me
+        	Configuration conf = context.getConfiguration();
         	
         	int count=0;
         	int distance = Integer.MAX_VALUE;
@@ -85,7 +97,7 @@ public class GraphMain {
         	{
         		
         		PageClass neighbors = new PageClass(iter.next().toString());
-        		System.out.println("reducer input:  "+ key.toString() + neighbors.toString());
+        		System.out.println("reducer input:  key: "+ key.toString() + " value: "+ neighbors.toString());
         			//System.out.println(neighbors.toString());
         		count++;	
         		if(neighbors.getneighbors()!=null && neighbors.getneighbors().size()!=0){
@@ -96,13 +108,23 @@ public class GraphMain {
         			path = neighbors.getPath();
         		}
         	}
-        	//if(count!=1){
-        	//System.out.println(Integer.toString(count));
-        	//}
+        	if(key.get() == endpage && distance != Integer.MAX_VALUE){
+        	//if(key.get() == endpage){
+        		context.getCounter("Found","Result").increment(endpage);
+        		context.getCounter("Found","Result").setDisplayName(path.toString());
+        	    System.out.println("key: "+ key.toString() + "distance: " + Integer.toString(distance));
+        		//conf.setBoolean("found", true);
+        		//conf.set("shortestpath", path.toString()); //not working; conf cannot pass out to the main;
+        	    
+        	}
         	page.set(distance, path);
         	context.write(key, page);
         	
         }
+        
+        
+       
+        
     }
 	
 	
@@ -164,7 +186,10 @@ public class GraphMain {
         try{
                 while(cont) 
                 {
-                		job = Job.getInstance(new Configuration());
+                	    Configuration conf = new Configuration();
+                	    conf.setInt("endpage", endPage);
+                	    conf.setBoolean("found", false);
+                		job = Job.getInstance(conf);
                 		job.setJarByClass(GraphMain.class);
                         //if(job==null)
                                 //return -1;
@@ -199,18 +224,27 @@ public class GraphMain {
                        
                         
                         job.waitForCompletion(true);
-                               
                         
-                        if(ct==1) //reach the result!!!!!!!
+                        long foundpage = job.getCounters().findCounter("Found","Result").getValue();
+                        String shortestpath = job.getCounters().findCounter("Found","Result").getDisplayName();
+                        //conf = job.getConfiguration();       
+                       // boolean found = conf.getBoolean("found", false);
+                       // System.out.println(" found: " + found);
+                       // String shortestpath = conf.get("shortpath");
+                       // System.out.println("shortest path found: " + shortestpath);
+                        if((int)foundpage == endPage) //reach the result!!!!!!!
                         {
                                 cont = false;
+                               // String shortestpath = conf.get("shortpath");
+                                System.out.println("shortest path found: " + shortestpath);
                                 if(ct>1){
                                         fs = FileSystem.get(job.getConfiguration());
                                         fs.delete(new Path(TMP_DIR + "/output/o"+(ct)), true);
                                 }
                         }
-                        if(numLoop >= 15) {
+                        if(numLoop >= 2) {
                         	cont = false;
+                        	System.out.println("exceed max number of iteration");
                         	if(ct>1){
                                 fs = FileSystem.get(job.getConfiguration());
                                 fs.delete(new Path(TMP_DIR + "/output/o"+(ct)), true);
