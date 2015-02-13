@@ -39,20 +39,20 @@ public class GraphMain {
             System.out.println("mapper output:  "+ Integer.toString(p) + page.toString());
             if(page.getdistance()!= Integer.MAX_VALUE){
             	ArrayList<Integer> neighbors = page.getneighbors();
+            	
+            
+            	
+            	
+            		
             	for(int i=0;i<neighbors.size();i++){
             		int neighbour_id = neighbors.get(i);
             		int neighbour_distance = page.getdistance() +1;
+            		
             		ArrayList<Integer> neighbour_path = new ArrayList<Integer>();
             		if(page.getPath() != null && !page.getPath().equals("null") && !page.getPath().equals("")){
-            			neighbour_path = page.getPath();
-            			neighbour_path.add(p);
-            			 
-            			
-            		}
-            		else{
-            			neighbour_path.add(p);
-            		}
-            		
+                		neighbour_path = new ArrayList<Integer>(page.getPath());// bug fixed: used shallow copy to avoid direct reference of the old object;
+                	}	
+            		neighbour_path.add(p);
             		//ArrayList<Integer> neighbour_neighbour = new ArrayList<Integer>();
             		PageClass new_page = new PageClass(neighbour_distance, neighbour_path, null);
             		context.write(new IntWritable(neighbour_id) , new Text(new_page.toString()));
@@ -107,9 +107,131 @@ public class GraphMain {
 	
 	
 	
+
+	public static void writeFile(int startPage, String source, Path inputPath,Job job) throws Exception {
+		final int MAX = Integer.MAX_VALUE ;
+		File fin = new File(source);
+		FileInputStream fis = new FileInputStream(fin);
+		BufferedReader in = new BufferedReader(new InputStreamReader(fis));
+		
+		final FileSystem fs = FileSystem.get(job.getConfiguration());
+		OutputStreamWriter fstream = new OutputStreamWriter(fs.create(inputPath,true));
+		BufferedWriter out = new BufferedWriter(fstream);
+        
+		String aLine = null;
+		while ((aLine = in.readLine()) != null) {
+			//Process each line and add output to Dest.txt fileha
+			String[] alines = aLine.split(":");
+			//alines[1].split[" "];
+			if(Integer.parseInt(alines[0])==startPage){    //set the distance of the source node to 0; 
+				
+				out.write(alines[0]+"\t"+ 0 +",null,"+alines[1]);
+				out.newLine();	
+				
+			}
+			else{
+				out.write(alines[0]+"\t"+ MAX +",null,"+alines[1]);
+				out.newLine();
+			}
+		}
+		
+		// do not forget to close the buffer reader
+		in.close();
+ 
+		// close buffer writer
+		out.close();  
+	}
 	
+	public static void main(String[] args) throws Exception {
+		// TODO Auto-generated method stub
+		
+		//-----------------------------------
+		boolean cont=true; // flag to decide when to abort while loop
+        int ct=0; // decide if this is the first time run or not, first time run reads from original page file, other run reads from MapReduce output file
+        int numLoop = 0; // given # of loops
+        //JobConf conf = null;
+        FileSystem fs;
+        Job job = null;
+       
+        final int MAX = Integer.MAX_VALUE ;
+		String source = args[0];
+        int startPage = Integer.parseInt(args[1]);
+        int endPage = Integer.parseInt(args[2]);
+
+        System.out.println("Start Page is " + startPage);
+        System.out.println("End Page is " + endPage);
+       
+        try{
+                while(cont) 
+                {
+                		job = Job.getInstance(new Configuration());
+                		job.setJarByClass(GraphMain.class);
+                        //if(job==null)
+                                //return -1;
+                       
+                        if(ct==0){
+                        	Path Mapfile = new Path(TMP_DIR + "/input");
+                        	//FileInputFormat.setInputPaths(job, Mapfile);
+                        	FileInputFormat.setInputPaths(job, Mapfile);
+                        	writeFile(startPage,source,Mapfile,job);
+                        	
+                        }	
+                                //job.(cls);(conf, new Path(TMP_DIR + "/input"));
+                        else
+                            FileInputFormat.setInputPaths(job, new Path(TMP_DIR + "/output/o"+ct));
+                       
+                        if(ct>1)
+                        {
+                                fs = FileSystem.get(job.getConfiguration());
+                                fs.delete(new Path(TMP_DIR + "/output/o"+(ct-1)), true);
+                        }
+                       
+                        FileOutputFormat.setOutputPath(job, new Path(TMP_DIR + "/output/o"+(ct+1)));
+                       
+                        job.setInputFormatClass(TextInputFormat.class);
+                        job.setMapperClass(Map.class);
+                        job.setOutputKeyClass(IntWritable.class);
+                        job.setMapOutputValueClass(Text.class);
+                        job.setReducerClass(Reduce.class);
+                        job.setOutputKeyClass(IntWritable.class);
+                        job.setOutputValueClass(PageClass.class);
+                        job.setOutputFormatClass(TextOutputFormat.class);
+                       
+                        
+                        job.waitForCompletion(true);
+                               
+                        
+                        if(ct==1) //reach the result!!!!!!!
+                        {
+                                cont = false;
+                                if(ct>1){
+                                        fs = FileSystem.get(job.getConfiguration());
+                                        fs.delete(new Path(TMP_DIR + "/output/o"+(ct)), true);
+                                }
+                        }
+                        if(numLoop >= 15) {
+                        	cont = false;
+                        	if(ct>1){
+                                fs = FileSystem.get(job.getConfiguration());
+                                fs.delete(new Path(TMP_DIR + "/output/o"+(ct)), true);
+                            }
+                        }
+                        ct++;
+                        numLoop++;
+                }              
+        }
+        catch(Exception e)
+        {
+                fs = FileSystem.get(job.getConfiguration());
+                fs.delete(new Path(TMP_DIR + "/output"), true);
+        }
 	
-	
+	}
+
+	}
+
+        
+        /*
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		
@@ -216,4 +338,4 @@ public class GraphMain {
 
 	}
 
-}
+}*/
