@@ -12,8 +12,6 @@ import org.apache.hadoop.io.Writable;
 public class PageClass implements Writable{
 	 
 	    private int distance;
-	    //private String path_str = null;
-	    //private String neighbors_str = null;
 	    private ArrayList<Integer> path = new ArrayList<Integer>();
 	    private ArrayList<Integer> neighbors = new ArrayList<Integer>();
 	 

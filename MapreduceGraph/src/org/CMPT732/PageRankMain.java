@@ -48,6 +48,7 @@ public static class RankMap extends Mapper<LongWritable, Text, IntWritable, Text
                 context.write(new IntWritable(page_id) , new Text(page.toString()));
                 
                 this_page_current_rank = page.getrank();
+                if(page.getneighbors() != null && !page.getneighbors().equals("null") && !page.getneighbors().equals("")){	
                 neighbors = new ArrayList<Integer>(page.getneighbors());
                 out_page_rank = this_page_current_rank/neighbors.size();
                 
@@ -56,7 +57,7 @@ public static class RankMap extends Mapper<LongWritable, Text, IntWritable, Text
                 	
                 	context.write(new IntWritable(neighbors.get(i)) , new Text(temp_page.toString()));
                 }
-        		
+                }
         		//context.write(new IntWritable(),value);
         		//context.write(new IntWritable(p) , new Text(page.toString()));
         		

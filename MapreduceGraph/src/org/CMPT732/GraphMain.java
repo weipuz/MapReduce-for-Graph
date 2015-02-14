@@ -225,17 +225,16 @@ public class GraphMain {
                         job.setOutputKeyClass(IntWritable.class);
                         job.setOutputValueClass(PageClass.class);
                         job.setOutputFormatClass(TextOutputFormat.class);
-                       
+                        //conf = job.getConfiguration();       
+                        // boolean found = conf.getBoolean("found", false);
+                        // System.out.println(" found: " + found);
+                        // String shortestpath = conf.get("shortpath");
+                        // System.out.println("shortest path found: " + shortestpath);
                         
                         job.waitForCompletion(true);
-                        
                         long foundpage = job.getCounters().findCounter("Found","Result").getValue();
                         String shortestpath = job.getCounters().findCounter("Found","Result").getDisplayName();
-                        //conf = job.getConfiguration();       
-                       // boolean found = conf.getBoolean("found", false);
-                       // System.out.println(" found: " + found);
-                       // String shortestpath = conf.get("shortpath");
-                       // System.out.println("shortest path found: " + shortestpath);
+                      
                         if((int)foundpage == endPage) //reach the result!!!!!!!
                         {
                                 cont = false;
@@ -245,6 +244,7 @@ public class GraphMain {
                                         fs = FileSystem.get(job.getConfiguration());
                                         fs.delete(new Path(TMP_DIR + "/output/o"+(ct)), true);
                                 }
+                                
                         }
                         if(numLoop >= 5) {
                         	cont = false;
