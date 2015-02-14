@@ -20,6 +20,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
+
 public class GraphMain {
 
 	static private final Path TMP_DIR = new Path(GraphMain.class.getSimpleName() + "_TMP_");
@@ -36,14 +37,14 @@ public class GraphMain {
             PageClass page = new PageClass(inArray[1]);
             
             context.write(new IntWritable(p) , new Text(page.toString()));
-            System.out.println("mapper output:  "+ Integer.toString(p) + page.toString());
+            //System.out.println("mapper output:  "+ Integer.toString(p) + page.toString());
             if(page.getdistance()!= Integer.MAX_VALUE){
             	ArrayList<Integer> neighbors = page.getneighbors();
             	
             
             	
             	
-            		
+            if(neighbors != null && !neighbors.equals("null") && !neighbors.equals("")){	
             	for(int i=0;i<neighbors.size();i++){
             		int neighbour_id = neighbors.get(i);
             		int neighbour_distance = page.getdistance() +1;
@@ -56,10 +57,11 @@ public class GraphMain {
             		//ArrayList<Integer> neighbour_neighbour = new ArrayList<Integer>();
             		PageClass new_page = new PageClass(neighbour_distance, neighbour_path, null);
             		context.write(new IntWritable(neighbour_id) , new Text(new_page.toString()));
-            		System.out.println("mapper output:  key: "+ Integer.toString(neighbour_id) + " value: " + new_page.toString());
+            		//System.out.println("mapper output:  key: "+ Integer.toString(neighbour_id) + " value: " + new_page.toString());
        
             		
             		
+            	}
             	}
             }
             
@@ -79,7 +81,7 @@ public class GraphMain {
 		InterruptedException {
 			Configuration conf = context.getConfiguration();
 			endpage = conf.getInt("endpage",1);
-			System.out.println("endpage in reducer is :"+ endpage);
+			//System.out.println("endpage in reducer is :"+ endpage);
 			
 		}
         public void reduce(IntWritable key, Iterable<Text> values, Context context)
@@ -97,13 +99,14 @@ public class GraphMain {
         	{
         		
         		PageClass neighbors = new PageClass(iter.next().toString());
-        		System.out.println("reducer input:  key: "+ key.toString() + " value: "+ neighbors.toString());
+        		//System.out.println("reducer input:  key: "+ key.toString() + " value: "+ neighbors.toString());
         			//System.out.println(neighbors.toString());
         		count++;	
         		if(neighbors.getneighbors()!=null && neighbors.getneighbors().size()!=0){
         			page = neighbors; //
         		}
-        		else if(neighbors.getdistance() < distance){
+        		//else if(neighbors.getdistance() < distance){
+        		if(neighbors.getdistance() < distance){
         			distance = neighbors.getdistance();
         			path = neighbors.getPath();
         		}
@@ -112,7 +115,7 @@ public class GraphMain {
         	//if(key.get() == endpage){
         		context.getCounter("Found","Result").increment(endpage);
         		context.getCounter("Found","Result").setDisplayName(path.toString());
-        	    System.out.println("key: "+ key.toString() + "distance: " + Integer.toString(distance));
+        	    //System.out.println("key: "+ key.toString() + "distance: " + Integer.toString(distance));
         		//conf.setBoolean("found", true);
         		//conf.set("shortestpath", path.toString()); //not working; conf cannot pass out to the main;
         	    
@@ -164,6 +167,7 @@ public class GraphMain {
 		out.close();  
 	}
 	
+	
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		
@@ -180,8 +184,8 @@ public class GraphMain {
         int startPage = Integer.parseInt(args[1]);
         int endPage = Integer.parseInt(args[2]);
 
-        System.out.println("Start Page is " + startPage);
-        System.out.println("End Page is " + endPage);
+        //System.out.println("Start Page is " + startPage);
+        //System.out.println("End Page is " + endPage);
        
         try{
                 while(cont) 
@@ -215,7 +219,7 @@ public class GraphMain {
                        
                         job.setInputFormatClass(TextInputFormat.class);
                         job.setMapperClass(Map.class);
-                        job.setOutputKeyClass(IntWritable.class);
+                        job.setMapOutputKeyClass(IntWritable.class);
                         job.setMapOutputValueClass(Text.class);
                         job.setReducerClass(Reduce.class);
                         job.setOutputKeyClass(IntWritable.class);
@@ -235,14 +239,14 @@ public class GraphMain {
                         if((int)foundpage == endPage) //reach the result!!!!!!!
                         {
                                 cont = false;
-                               // String shortestpath = conf.get("shortpath");
+                               
                                 System.out.println("shortest path found: " + shortestpath);
                                 if(ct>1){
                                         fs = FileSystem.get(job.getConfiguration());
                                         fs.delete(new Path(TMP_DIR + "/output/o"+(ct)), true);
                                 }
                         }
-                        if(numLoop >= 2) {
+                        if(numLoop >= 5) {
                         	cont = false;
                         	System.out.println("exceed max number of iteration");
                         	if(ct>1){
