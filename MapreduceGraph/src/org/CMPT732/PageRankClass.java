@@ -17,7 +17,7 @@ public class PageRankClass {
 	        set(1, new ArrayList<Integer>());
 	    }
 	 
-	    public PageRankClass(int rank, ArrayList<Integer> neighbors) {
+	    public PageRankClass(double rank, ArrayList<Integer> neighbors) {
 	        set(rank, neighbors);
 	    }
 	 
@@ -36,7 +36,7 @@ public class PageRankClass {
 		    else{
 		        neighbors=null;
 		        }
-	    	set(Integer.parseInt(input[0]), neighbors);
+	    	set(Double.parseDouble(input[0]), neighbors);
 	    }
 	    
 	    
@@ -57,6 +57,16 @@ public class PageRankClass {
 	    public void set(double rank, ArrayList<Integer> neighbors) {
 	        this.rank = rank;
 	        this.neighbors = neighbors;
+	        //this.distance = distance;
+	      /*  if(neighbors!=null && neighbors.size()!=0){
+		    	neighbors_str = neighbors.toString().replaceAll("[^0-9]", " ");
+		    	}
+	        else{neighbors_str="null";}*/
+	    }
+	    
+	    public void set(double rank) {
+	        this.rank = rank;
+	        
 	        //this.distance = distance;
 	      /*  if(neighbors!=null && neighbors.size()!=0){
 		    	neighbors_str = neighbors.toString().replaceAll("[^0-9]", " ");

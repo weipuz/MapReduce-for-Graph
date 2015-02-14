@@ -3,7 +3,8 @@ package org.CMPT732;
 import java.io.*;
 import java.util.*;
 
-
+import org.CMPT732.GraphMain.Map;
+import org.CMPT732.GraphMain.Reduce;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -22,52 +23,50 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 public class PageRankMain {
 	
 	
-static private final Path TMP_DIR = new Path(PageRankMain.class.getSimpleName() + "_TMP_");
+	static private final Path TMP_DIR = new Path(PageRankMain.class.getSimpleName() + "_TMP_");
+	private static int PAGES_NUM = 5716808;
+	//private static int PAGES_NUM = 5;
 	
 public static class RankMap extends Mapper<LongWritable, Text, IntWritable, Text> {
     	
-    	private final static IntWritable one = new IntWritable(1);
+    	//private final static IntWritable one = new IntWritable(1);
+		
+		
+		
+		
         public void map(LongWritable key, Text value, Context context)
            throws IOException, InterruptedException {
-            String in = value.toString();
-            String[] inArray = in.split("\t");
-            int p = Integer.parseInt(inArray[0]);
-            //String page = inArray[1]+ inArray[2]+inArray[3];
-            PageClass page = new PageClass(inArray[1]);
-            
-            context.write(new IntWritable(p) , new Text(page.toString()));
-            System.out.println("mapper output:  "+ Integer.toString(p) + page.toString());
-            if(page.getdistance()!= Integer.MAX_VALUE){
-            	ArrayList<Integer> neighbors = page.getneighbors();
-            	for(int i=0;i<neighbors.size();i++){
-            		int neighbour_id = neighbors.get(i);
-            		int neighbour_distance = page.getdistance() +1;
-            		ArrayList<Integer> neighbour_path = new ArrayList<Integer>();
-            		if(page.getPath() != null && !page.getPath().equals("null") && !page.getPath().equals("")){
-            			neighbour_path = page.getPath();
-            			neighbour_path.add(p);
-            			 
-            			
-            		}
-            		else{
-            			neighbour_path.add(p);
-            		}
-            		
-            		//ArrayList<Integer> neighbour_neighbour = new ArrayList<Integer>();
-            		PageClass new_page = new PageClass(neighbour_distance, neighbour_path, null);
-            		context.write(new IntWritable(neighbour_id) , new Text(new_page.toString()));
-            		System.out.println("mapper output:  "+ Integer.toString(neighbour_id) + new_page.toString());
-       
-            		
-            		
-            	}
+				ArrayList<Integer> neighbors = null;
+        		double out_page_rank = 0;
+        		double this_page_current_rank =0;
+        		String in = value.toString();
+        		String[] inArray = in.split("\t");
+        		
+        		int page_id = Integer.parseInt(inArray[0]);
+                //String page = inArray[1]+ inArray[2]+inArray[3];
+                PageRankClass page = new PageRankClass(inArray[1]);
+                context.write(new IntWritable(page_id) , new Text(page.toString()));
+                
+                this_page_current_rank = page.getrank();
+                neighbors = new ArrayList<Integer>(page.getneighbors());
+                out_page_rank = this_page_current_rank/neighbors.size();
+                
+                for(int i=0; i< neighbors.size(); i++){
+                	PageRankClass temp_page = new PageRankClass(out_page_rank,null);
+                	
+                	context.write(new IntWritable(neighbors.get(i)) , new Text(temp_page.toString()));
+                }
+        		
+        		//context.write(new IntWritable(),value);
+        		//context.write(new IntWritable(p) , new Text(page.toString()));
+        		
             }
             
             	
             	
             
             
-        }
+        
     }
 	
 	public static class RankReduce extends Reducer<IntWritable, Text, IntWritable, Text> {
@@ -76,36 +75,65 @@ public static class RankMap extends Mapper<LongWritable, Text, IntWritable, Text
             // Write me
         	
         	int count=0;
-        	int distance = Integer.MAX_VALUE;
-        	ArrayList<Integer> path = new ArrayList<Integer>();
+        	double sum = 0;
+        	PageRankClass page = new PageRankClass();
+        	
         	//ArrayList<Integer> neighbor = new ArrayList<Integer>();
-        	PageClass page = new PageClass();
+        	
         	Iterator<Text> iter = values.iterator();
         	while (iter.hasNext())
         	{
         		
-        		PageClass neighbors = new PageClass(iter.next().toString());
-        		System.out.println("reducer input:  "+ key.toString() + neighbors.toString());
+        		PageRankClass neighbors = new PageRankClass(iter.next().toString());
+        		//System.out.println("reducer input:  "+ key.toString() + neighbors.toString());
         			//System.out.println(neighbors.toString());
         		count++;	
         		if(neighbors.getneighbors()!=null && neighbors.getneighbors().size()!=0){
         			page = neighbors; //
         		}
-        		else if(neighbors.getdistance() < distance){
-        			distance = neighbors.getdistance();
-        			path = neighbors.getPath();
+        		else {
+        			sum += neighbors.getrank();
         		}
         	}
         	//if(count!=1){
         	//System.out.println(Integer.toString(count));
         	//}
-        	page.set(distance, path);
+        	//page.set(distance, path);
+        	double page_rank = 0.15/PAGES_NUM + 0.85*sum;
+        	page.set(page_rank);
         	
         	context.write(key, new Text(page.toString()));
         	
         }
     }
 	
+	public static void writeFile( String source, Path inputPath,Job job) throws Exception {
+		//final int MAX = Integer.MAX_VALUE ;
+		File fin = new File(source);
+		FileInputStream fis = new FileInputStream(fin);
+		BufferedReader in = new BufferedReader(new InputStreamReader(fis));
+		
+		final FileSystem fs = FileSystem.get(job.getConfiguration());
+		OutputStreamWriter fstream = new OutputStreamWriter(fs.create(inputPath,true));
+		BufferedWriter out = new BufferedWriter(fstream);
+        
+		String aLine = null;
+		while ((aLine = in.readLine()) != null) {
+			//Process each line and add output to Dest.txt fileha
+			String[] alines = aLine.split(":");
+			//alines[1].split[" "];
+			double rank = ((double)1/PAGES_NUM);
+			out.write(alines[0]+"\t"+ rank + ","+alines[1]);
+			out.newLine();
+			
+		}
+		
+		// do not forget to close the buffer reader
+		in.close();
+ 
+		// close buffer writer
+		out.close();  
+	}
 	
 	
 
@@ -115,102 +143,87 @@ public static class RankMap extends Mapper<LongWritable, Text, IntWritable, Text
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		
-		
-		final Path inDir = new Path(TMP_DIR, "in");
-        final Path outDir = new Path(TMP_DIR, "out");
-      //mapreduce
-		long starttime = System.currentTimeMillis();
-		  Job job = Job.getInstance(new Configuration());
-		  job.setJarByClass(PageRankMain.class);
-		  job.setMapOutputKeyClass(IntWritable.class);
-		  job.setMapOutputValueClass(Text.class);
-		  job.setOutputKeyClass(IntWritable.class);
-		  job.setOutputValueClass(Text.class);
-		  job.setMapperClass(RankMap.class);
-		  job.setReducerClass(RankReduce.class);
-		  //job.setNumReduceTasks(0);
-		  //job.getConfiguration().set("mapreduce.textoutputformat.separator", ":");
-		  job.setInputFormatClass(TextInputFormat.class);
-		  job.setOutputFormatClass(TextOutputFormat.class);
-		  
-		  //job.getConfiguration().setLong("mapreduce.input.fileinputformat.split.maxsize", size);
+		boolean cont=true; // flag to decide when to abort while loop
+        int ct=0; // decide if this is the first time run or not, first time run reads from original page file, other run reads from MapReduce output file
+        int numLoop = 0; // given # of loops
+        //JobConf conf = null;
+        FileSystem fs;
+        Job job = null;
+       
         
-        
-        
-        
-		
-        
-        int count = 0;
 		String source = args[0];
- 
-		File fin = new File(source);
-		FileInputStream fis = new FileInputStream(fin);
-		BufferedReader in = new BufferedReader(new InputStreamReader(fis));
- 
-		
-		boolean flag = true;
-		final FileSystem fs = FileSystem.get(job.getConfiguration());
-        //FileContext fc = FileContext.getFileContext();
-        if (fs.exists(TMP_DIR)) {
-        	flag = false;//don't need to read the original file first; 
-        	
-        }
-        //if (!fs.mkdirs(inDir)) {
-       //     throw new IOException("Cannot create input directory " + inDir);
-       // }
         
-        Path Mapfile = new Path(inDir, "input");
-        
-      /*  if (flag){
-        
-	        OutputStreamWriter fstream = new OutputStreamWriter(fs.create(Mapfile,true));
-			BufferedWriter out = new BufferedWriter(fstream);
-	        
-			String aLine = null;
-			while ((aLine = in.readLine()) != null) {
-				//Process each line and add output to Dest.txt fileha
-				String[] alines = aLine.split(":");
-				//alines[1].split[" "];
-				if(alines[0].equals("2")){    //set the distance of the source node to 0; 
-					
-				out.write(alines[0]+"\t"+ 0 +",null,"+alines[1]);
-				out.newLine();	
-					
-				}
-				else{
-				out.write(alines[0]+"\t"+ MAX +",null,"+alines[1]);
-				out.newLine();
-				}
-			}
-			
-			// do not forget to close the buffer reader
-			in.close();
-	 
-			// close buffer writer
-			out.close();  
-		
-        }
-      
-        
-        
-        */
-        
-        
-        //SequenceFile.Writer sqwr = SequenceFile.createWriter(job.getConfiguration(), SequenceFile.Writer.file(outDir), SequenceFile.Writer.keyClass(LongWritable.class), SequenceFile.Writer.valueClass(LongWritable.class));
-        
-        
-        
-        
-        
-        
-        FileInputFormat.setInputPaths(job, Mapfile);
-        FileOutputFormat.setOutputPath(job, new Path(args[2]));
 
-        job.waitForCompletion(true);
-        long endtime = System.currentTimeMillis();
-        long time = endtime - starttime;
-        System.out.println(time);
-		
+        //System.out.println("Start Page is " + startPage);
+        //System.out.println("End Page is " + endPage);
+       
+       //try{
+                while(cont) 
+                {
+                	    Configuration conf = new Configuration();
+                	    
+                	    
+                		job = Job.getInstance(conf);
+                		job.setJarByClass(GraphMain.class);
+                        //if(job==null)
+                                //return -1;
+                       
+                        if(ct==0){
+                        	Path Mapfile = new Path(TMP_DIR + "/input");
+                        	//FileInputFormat.setInputPaths(job, Mapfile);
+                        	FileInputFormat.setInputPaths(job, Mapfile);
+                        	writeFile(source,Mapfile,job);
+                        	
+                        }	
+                                //job.(cls);(conf, new Path(TMP_DIR + "/input"));
+                        else
+                            FileInputFormat.setInputPaths(job, new Path(TMP_DIR + "/output/o"+ct));
+                       
+                        if(ct>1)
+                        {
+                                fs = FileSystem.get(job.getConfiguration());
+                                //fs.delete(new Path(TMP_DIR + "/output/o"+(ct-1)), true);
+                        }
+                       
+                        FileOutputFormat.setOutputPath(job, new Path(TMP_DIR + "/output/o"+(ct+1)));
+                       
+                        job.setInputFormatClass(TextInputFormat.class);
+                        job.setMapperClass(RankMap.class);
+                        job.setMapOutputKeyClass(IntWritable.class);
+                        job.setMapOutputValueClass(Text.class);
+                        job.setReducerClass(RankReduce.class);
+                        job.setOutputKeyClass(IntWritable.class);
+                        job.setOutputValueClass(Text.class);
+                        job.setOutputFormatClass(TextOutputFormat.class);
+                       
+                        
+                        job.waitForCompletion(true);
+                        
+                        
+                        //conf = job.getConfiguration();       
+                       // boolean found = conf.getBoolean("found", false);
+                       // System.out.println(" found: " + found);
+                       // String shortestpath = conf.get("shortpath");
+                       // System.out.println("shortest path found: " + shortestpath);
+                       
+                        if(numLoop >= 4) {
+                        	cont = false;
+                        	//System.out.println("exceed max number of iteration");
+                        	if(ct>1){
+                                fs = FileSystem.get(job.getConfiguration());
+                               // fs.delete(new Path(TMP_DIR + "/output/o"+(ct)), true);
+                            }
+                        }
+                        ct++;
+                        numLoop++;
+                }              
+                /*    }
+          catch(Exception e)
+        {
+                fs = FileSystem.get(job.getConfiguration());
+                fs.delete(new Path(TMP_DIR + "/output"), true);
+        }
+		*/
 
 	}
 }
